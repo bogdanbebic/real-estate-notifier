@@ -39,7 +39,7 @@ def parse_page(soup, dbFilePath, prefixList, lookbackPeriodDays):
                 continue
 
             data_dict = {'name': offer_title, 'price': offer_price, 'location': offer_location, 'url': website_base_url + offer_relative_url}
-            cursor.execute('''INSERT INTO RealEstate (Name, Price, Location, URL) VALUES (:name, :price, :location, :url)''', data_dict)
+            cursor.execute('''INSERT OR IGNORE INTO RealEstate (Name, Price, Location, URL) VALUES (:name, :price, :location, :url)''', data_dict)
 
         conn.commit()
 

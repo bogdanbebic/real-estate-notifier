@@ -3,7 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Telegram.Bot;
 
 IConfigurationBuilder builder = new ConfigurationBuilder()
-    .SetBasePath(Directory.GetCurrentDirectory())
+    .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
     .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
     .AddJsonFile("appsettings.local.json", optional: true, reloadOnChange: true);
 
