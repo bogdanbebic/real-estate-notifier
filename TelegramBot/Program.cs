@@ -21,12 +21,15 @@ int userChatID = int.Parse(
 using SqliteConnection connection = new(connectionString: $"Data Source={dbPath}");
 connection.Open();
 
-string query = "SELECT Name, Price, Location, URL FROM RealEstate WHERE TimestampIngested > datetime('now', '-2 hours')";
+using SqliteCommand command = new(
+    commandText: "SELECT ID, Name, Price, Location, URL FROM RealEstate WHERE Visited = 0",
+    connection: connection);
 
-using SqliteCommand command = new(query, connection);
-using var reader = command.ExecuteReader();
+using SqliteDataReader reader = command.ExecuteReader();
+
 while (reader.Read())
 {
+    int recordID = reader.GetInt32(reader.GetOrdinal("ID"));
     string name = reader["Name"]?.ToString() ?? string.Empty;
     string price = reader["Price"]?.ToString() ?? string.Empty;
     string location = reader["Location"]?.ToString() ?? string.Empty;
@@ -36,4 +39,11 @@ while (reader.Read())
         chatId: userChatID,
         text: $"{name}, {price}, {location}\n{url}\n"
     );
+
+    using SqliteCommand updateCommand = new(
+        commandText: "UPDATE RealEstate SET Visited = 1 WHERE ID = @RecordId",
+        connection: connection);
+
+    updateCommand.Parameters.AddWithValue("@RecordId", recordID);
+    updateCommand.ExecuteNonQuery();
 }
