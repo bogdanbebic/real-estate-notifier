@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 from configparser import ConfigParser
 from datetime import datetime, timedelta
+import os
 import requests
 import sqlite3
 import time
@@ -10,7 +11,7 @@ website_base_url = 'https://nekretnine.rs'
 # URL of the webpage to fetch
 nextLink = f'{website_base_url}/stambeni-objekti/stambeni-objekti/stanovi/izdavanje-prodaja/izdavanje/grad/beograd/vrsta-grejanja/centralno-grejanje/kvadratura/40_1000000/cena/1_700/na-spratu/2_3_4_5_6_nije-poslednji-sprat/lista/po-stranici/20/'
 
-def parse_page(soup, dbFilePath, prefixList):
+def parse_page(soup, dbFilePath, prefixList, lookbackPeriodDays):
     with sqlite3.connect(dbFilePath) as conn:
         cursor = conn.cursor()
 
@@ -26,7 +27,7 @@ def parse_page(soup, dbFilePath, prefixList):
             offer_price = "TODO"
             # offer_price = parent_element_offer.find(class_='offer-price').text.strip()
 
-            datetime_filter = datetime.now() - timedelta(days=7) < datetime.strptime(offer_date, '%d.%m.%Y')
+            datetime_filter = datetime.now() - timedelta(days=lookbackPeriodDays) < datetime.strptime(offer_date, '%d.%m.%Y')
             if not datetime_filter:
                 continue
 
@@ -44,11 +45,14 @@ def parse_page(soup, dbFilePath, prefixList):
 
 
 if __name__ == "__main__":
+    script_dir = os.path.dirname(os.path.realpath(__file__))
+
     config = ConfigParser()
-    config.read('config.ini', encoding='utf-8')
-    config.read('config.local.ini', encoding='utf-8')
+    config.read(os.path.join(script_dir, 'config.ini'), encoding='utf-8')
+    config.read(os.path.join(script_dir, 'config.local.ini'), encoding='utf-8')
 
     dbPath = config.get('main', 'databasePath')
+    lookbackPeriodDays = config.getint('main', 'lookbackPeriodDays')
     prefixList = config.get('main', 'prefixList').split(',\n')
 
     while True:
@@ -67,7 +71,7 @@ if __name__ == "__main__":
 
         nextLink = website_base_url + nextArticleButtons[0]['href']
 
-        parse_page(soup, dbPath, prefixList)
+        parse_page(soup, dbPath, prefixList, lookbackPeriodDays)
 
         # Prevent website from figuring out this is a bot:
         # Adding sleep time adds human like behavior.
