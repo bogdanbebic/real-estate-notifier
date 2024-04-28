@@ -19,7 +19,7 @@ website_base_url = 'https://nekretnine.rs'
 # URL of the webpage to fetch
 nextLink = f'{website_base_url}/stambeni-objekti/stambeni-objekti/stanovi/izdavanje-prodaja/izdavanje/grad/beograd/vrsta-grejanja/centralno-grejanje/kvadratura/40_1000000/cena/1_700/na-spratu/2_3_4_5_6_nije-poslednji-sprat/lista/po-stranici/20/'
 
-def parse_page(soup, dbFilePath, prefixList, lookbackPeriodDays):
+def parse_page(soup, dbFilePath, prefixList):
     with sqlite3.connect(dbFilePath) as conn:
         cursor = conn.cursor()
 
@@ -37,7 +37,7 @@ def parse_page(soup, dbFilePath, prefixList, lookbackPeriodDays):
             offer_price = "TODO"
             # offer_price = parent_element_offer.find(class_='offer-price').text.strip()
 
-            datetime_filter = datetime.now(timezone.utc) - timedelta(days=lookbackPeriodDays) < datetime.strptime(offer_date, '%d.%m.%Y').replace(tzinfo=timezone.utc)
+            datetime_filter = datetime.now(timezone.utc) - timedelta(days=1) < datetime.strptime(offer_date, '%d.%m.%Y').replace(tzinfo=timezone.utc)
             if not datetime_filter:
                 continue
 
@@ -65,7 +65,6 @@ if __name__ == "__main__":
     config.read(os.path.join(script_dir, 'config.local.ini'), encoding='utf-8')
 
     dbPath = os.path.join(script_dir, '../realestate.db')
-    lookbackPeriodDays = config.getint('main', 'lookbackPeriodDays')
     prefixList = config.get('main', 'prefixList').split(',\n')
 
     while True:
@@ -84,7 +83,7 @@ if __name__ == "__main__":
 
         nextLink = website_base_url + nextArticleButtons[0]['href']
 
-        parse_page(soup, dbPath, prefixList, lookbackPeriodDays)
+        parse_page(soup, dbPath, prefixList)
 
         # Prevent website from figuring out this is a bot:
         # Adding sleep time adds human like behavior.
