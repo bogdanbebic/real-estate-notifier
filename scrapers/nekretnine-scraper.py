@@ -51,7 +51,7 @@ if __name__ == "__main__":
     config.read(os.path.join(script_dir, 'config.ini'), encoding='utf-8')
     config.read(os.path.join(script_dir, 'config.local.ini'), encoding='utf-8')
 
-    dbPath = config.get('main', 'databasePath')
+    dbPath = os.path.join(script_dir, '../realestate.db')
     lookbackPeriodDays = config.getint('main', 'lookbackPeriodDays')
     prefixList = config.get('main', 'prefixList').split(',\n')
 

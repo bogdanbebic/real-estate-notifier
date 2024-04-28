@@ -12,8 +12,7 @@ IConfiguration config = builder.Build();
 TelegramBotClient botClient = new(token: config["AppSettings:TelegramBotToken"] ??
     throw new ArgumentNullException("TelegramBotToken"));
 
-string dbPath = config["AppSettings:DatabasePath"] ??
-    throw new ArgumentNullException("DatabasePath");
+string dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "../realestate.db");
 
 int userChatID = int.Parse(
     config["AppSettings:TelegramChatID"] ?? throw new ArgumentNullException("TelegramChatID"));
