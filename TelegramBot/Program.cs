@@ -26,6 +26,8 @@ using SqliteCommand command = new(
 
 using SqliteDataReader reader = command.ExecuteReader();
 
+int rowCount = 0;
+
 while (reader.Read())
 {
     int recordID = reader.GetInt32(reader.GetOrdinal("ID"));
@@ -45,4 +47,8 @@ while (reader.Read())
 
     updateCommand.Parameters.AddWithValue("@RecordId", recordID);
     updateCommand.ExecuteNonQuery();
+
+    rowCount++;
 }
+
+Console.WriteLine($"[{DateTime.UtcNow}] Rows processed: {rowCount}");

@@ -1,6 +1,6 @@
 from bs4 import BeautifulSoup
 from configparser import ConfigParser
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import os
 import requests
 import sqlite3
@@ -15,6 +15,8 @@ def parse_page(soup, dbFilePath, prefixList, lookbackPeriodDays):
     with sqlite3.connect(dbFilePath) as conn:
         cursor = conn.cursor()
 
+        rowCount = 0
+
         for element in soup.find_all(class_='offer-adress'):
             parent_element_offer = element.parent.parent
             offer_title = "TODO"
@@ -27,7 +29,7 @@ def parse_page(soup, dbFilePath, prefixList, lookbackPeriodDays):
             offer_price = "TODO"
             # offer_price = parent_element_offer.find(class_='offer-price').text.strip()
 
-            datetime_filter = datetime.now() - timedelta(days=lookbackPeriodDays) < datetime.strptime(offer_date, '%d.%m.%Y')
+            datetime_filter = datetime.now(timezone.utc) - timedelta(days=lookbackPeriodDays) < datetime.strptime(offer_date, '%d.%m.%Y').replace(tzinfo=timezone.utc)
             if not datetime_filter:
                 continue
 
@@ -40,8 +42,11 @@ def parse_page(soup, dbFilePath, prefixList, lookbackPeriodDays):
 
             data_dict = {'name': offer_title, 'price': offer_price, 'location': offer_location, 'url': website_base_url + offer_relative_url}
             cursor.execute('''INSERT OR IGNORE INTO RealEstate (Name, Price, Location, URL) VALUES (:name, :price, :location, :url)''', data_dict)
+            rowCount += 1
 
         conn.commit()
+
+        print(f"[{datetime.now(timezone.utc)}] Rows processed: {rowCount}")
 
 
 if __name__ == "__main__":
