@@ -1,6 +1,19 @@
 ﻿using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Telegram.Bot;
+
+using ILoggerFactory loggerFactory =
+    LoggerFactory.Create(builder =>
+        builder.AddSimpleConsole(options =>
+        {
+            options.IncludeScopes = true;
+            options.SingleLine = true;
+            options.TimestampFormat = "yyyy-MM-dd HH:mm:ss ";
+            options.UseUtcTimestamp = true;
+        }));
+
+ILogger<Program> logger = loggerFactory.CreateLogger<Program>();
 
 IConfigurationBuilder builder = new ConfigurationBuilder()
     .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
@@ -12,10 +25,12 @@ IConfiguration config = builder.Build();
 TelegramBotClient botClient = new(token: config["AppSettings:TelegramBotToken"] ??
     throw new ArgumentNullException("TelegramBotToken"));
 
-string dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "../realestate.db");
+string dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "realestate.db");
 
 int userChatID = int.Parse(
     config["AppSettings:TelegramChatID"] ?? throw new ArgumentNullException("TelegramChatID"));
+
+logger.LogInformation($"Connecting to DB at path {dbPath}");
 
 using SqliteConnection connection = new(connectionString: $"Data Source={dbPath}");
 connection.Open();
@@ -51,4 +66,4 @@ while (reader.Read())
     rowCount++;
 }
 
-Console.WriteLine($"[{DateTime.UtcNow}] Rows processed: {rowCount}");
+logger.LogInformation($"Rows processed: {rowCount}");

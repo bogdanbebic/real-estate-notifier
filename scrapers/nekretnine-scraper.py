@@ -1,10 +1,18 @@
 from bs4 import BeautifulSoup
 from configparser import ConfigParser
 from datetime import datetime, timedelta, timezone
+import logging
 import os
 import requests
 import sqlite3
 import time
+
+logging.basicConfig(
+    format='%(asctime)s %(levelname)s: %(module)s[%(process)d] %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    level=logging.INFO)
+
+logging.Formatter.converter = time.gmtime
 
 website_base_url = 'https://nekretnine.rs'
 
@@ -46,7 +54,7 @@ def parse_page(soup, dbFilePath, prefixList, lookbackPeriodDays):
 
         conn.commit()
 
-        print(f"[{datetime.now(timezone.utc)}] Rows processed: {rowCount}")
+        logging.info(f"Rows processed: {rowCount}")
 
 
 if __name__ == "__main__":
@@ -61,7 +69,7 @@ if __name__ == "__main__":
     prefixList = config.get('main', 'prefixList').split(',\n')
 
     while True:
-        print(nextLink)
+        logging.info(nextLink)
 
         response = requests.get(nextLink)
 
