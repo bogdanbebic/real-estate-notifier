@@ -6,7 +6,6 @@
 realestate.db
 
 # Local settings files
-appsettings.local.json
 config.local.ini
 
 # Tools and virtual environments

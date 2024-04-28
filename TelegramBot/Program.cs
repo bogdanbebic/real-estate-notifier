@@ -1,5 +1,6 @@
-﻿using Microsoft.Data.Sqlite;
-using Microsoft.Extensions.Configuration;
+﻿using Azure.Identity;
+using Azure.Security.KeyVault.Secrets;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 
@@ -15,20 +16,16 @@ using ILoggerFactory loggerFactory =
 
 ILogger<Program> logger = loggerFactory.CreateLogger<Program>();
 
-IConfigurationBuilder builder = new ConfigurationBuilder()
-    .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
-    .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-    .AddJsonFile("appsettings.local.json", optional: true, reloadOnChange: true);
+SecretClient secretClient = new(
+    vaultUri: new Uri("https://realestatenotifier-vault.vault.azure.net/"),
+    credential: new DefaultAzureCredential());
 
-IConfiguration config = builder.Build();
+string telegramBotToken = secretClient.GetSecret(name: "TelegramBotToken").Value.Value;
+int userChatID = int.Parse(secretClient.GetSecret(name: "TelegramChatID").Value.Value);
 
-TelegramBotClient botClient = new(token: config["AppSettings:TelegramBotToken"] ??
-    throw new ArgumentNullException("TelegramBotToken"));
+TelegramBotClient botClient = new(token: telegramBotToken);
 
 string dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "realestate.db");
-
-int userChatID = int.Parse(
-    config["AppSettings:TelegramChatID"] ?? throw new ArgumentNullException("TelegramChatID"));
 
 logger.LogInformation($"Connecting to DB at path {dbPath}");
 
