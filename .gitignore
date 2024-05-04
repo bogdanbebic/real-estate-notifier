@@ -5,9 +5,6 @@
 # SQLite database file
 realestate.db
 
-# Local settings files
-config.local.ini
-
 # Tools and virtual environments
 venv/
 sqlite-tools*
