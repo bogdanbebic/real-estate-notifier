@@ -73,9 +73,7 @@ class NekretnineScraper:
             offer_meta_info = parent_element_offer.find('div', class_='offer-meta-info').text
             offer_date = offer_meta_info.split('|')[0].strip()
             offer_location = parent_element_offer.find(class_='offer-location').text.strip()
-
-            offer_price = "TODO"
-            # offer_price = parent_element_offer.find(class_='offer-price').text.strip()
+            offer_price = parent_element_offer.find(class_='offer-price').find('span').text.strip()
 
             datetime_filter = datetime.now(timezone.utc) - timedelta(days=1) < datetime.strptime(offer_date, '%d.%m.%Y').replace(tzinfo=timezone.utc)
             if not datetime_filter:
