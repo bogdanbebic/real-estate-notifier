@@ -1,10 +1,11 @@
+from azure.cosmos import CosmosClient
+from azure.identity import DefaultAzureCredential
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta, timezone
 import logging
-import os
 import requests
-import sqlite3
 import time
+import uuid
 
 logging.basicConfig(
     format='%(asctime)s %(levelname)s: %(module)s[%(process)d] %(message)s',
@@ -56,6 +57,8 @@ class NekretnineScraper:
             'Sremčica',
             'Čukarica',
             'Čukarička padina',
+            'Labudovo brdo, Beograd, Srbija',
+            'Batajnica, Beograd, Srbija',
         ])
 
     def get_next_page_link(self, soup):
@@ -86,7 +89,7 @@ class NekretnineScraper:
             if not location_filter:
                 continue
 
-            parsed.append({'name': 'Nekretnine', 'price': offer_price, 'location': offer_location, 'url': self.url + offer_relative_url})
+            parsed.append({'id': str(uuid.uuid4()), 'name': 'Nekretnine', 'price': offer_price, 'location': offer_location, 'url': self.url + offer_relative_url, 'visited': 0})
 
         return parsed
 
@@ -94,9 +97,10 @@ class NekretnineScraper:
         scraped = []
 
         next_link = f'{self.url}/stambeni-objekti/stambeni-objekti/stanovi/izdavanje-prodaja/izdavanje/grad/beograd/vrsta-grejanja/centralno-grejanje/kvadratura/40_1000000/cena/1_700/na-spratu/2_3_4_5_6_nije-poslednji-sprat/lista/po-stranici/20/'
+        # next_link = f'{self.url}/stambeni-objekti/stanovi/izdavanje-prodaja/prodaja/grad/beograd/uknjizeno/vrsta-grejanja/centralno-grejanje/kvadratura/45_1000000/cena/1_300000/na-spratu/2_3_4_5_6_nije-poslednji-sprat/lista/po-stranici/20/'
 
         while next_link is not None:
-            logging.debug(next_link)
+            logging.info(next_link)
 
             response = requests.get(next_link)
             if response.status_code != 200:
@@ -116,15 +120,17 @@ class NekretnineScraper:
 
 
 if __name__ == "__main__":
-    script_dir = os.path.dirname(os.path.realpath(__file__))
-
-    dbPath = os.path.join(script_dir, '../realestate-test.db')
-
     scraper = NekretnineScraper()
     real_estate = scraper.scrape()
     logging.debug(real_estate)
+    logging.info(len(real_estate))
 
-    with sqlite3.connect(dbPath) as conn:
-        cursor = conn.cursor()
-        cursor.executemany('''INSERT OR IGNORE INTO RealEstate (Name, Price, Location, URL) VALUES (:name, :price, :location, :url)''', real_estate)
-        conn.commit()
+    client = CosmosClient(
+        'https://realestatenotifier-cosmosdb.documents.azure.com:443/',
+        credential=DefaultAzureCredential())
+
+    database = client.get_database_client('cosmosDB')
+    container = database.get_container_client('Items')
+
+    for item in real_estate:
+        container.create_item(body=item)

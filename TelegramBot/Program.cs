@@ -1,6 +1,7 @@
-﻿using Azure.Identity;
+﻿using Azure.Core;
+using Azure.Identity;
 using Azure.Security.KeyVault.Secrets;
-using Microsoft.Data.Sqlite;
+using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Logging;
 using Telegram.Bot;
 
@@ -16,51 +17,50 @@ using ILoggerFactory loggerFactory =
 
 ILogger<Program> logger = loggerFactory.CreateLogger<Program>();
 
+TokenCredential credential = new DefaultAzureCredential();
+
 SecretClient secretClient = new(
     vaultUri: new Uri("https://realestatenotifier-vault.vault.azure.net/"),
-    credential: new DefaultAzureCredential());
+    credential: credential);
 
 string telegramBotToken = secretClient.GetSecret(name: "TelegramBotToken").Value.Value;
 int userChatID = int.Parse(secretClient.GetSecret(name: "TelegramChatID").Value.Value);
 
 TelegramBotClient botClient = new(token: telegramBotToken);
 
-string dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "realestate.db");
+CosmosClient cosmosClient = new(
+    accountEndpoint: "https://realestatenotifier-cosmosdb.documents.azure.com:443/",
+    tokenCredential: credential,
+    clientOptions: new CosmosClientOptions()
+        {
+            SerializerOptions = new CosmosSerializationOptions { PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase }
+        });
 
-logger.LogInformation($"Connecting to DB at path {dbPath}");
+Database database = cosmosClient.GetDatabase("cosmosDB");
+Container container = database.GetContainer("Items");
 
-using SqliteConnection connection = new(connectionString: $"Data Source={dbPath}");
-connection.Open();
+logger.LogInformation("Connected to Cosmos DB.");
 
-using SqliteCommand command = new(
-    commandText: "SELECT ID, Name, Price, Location, URL FROM RealEstate WHERE Visited = 0",
-    connection: connection);
-
-using SqliteDataReader reader = command.ExecuteReader();
+using FeedIterator<RealEstate> feed =
+    container.GetItemQueryIterator<RealEstate>(
+        queryText: "SELECT * FROM Items WHERE Items.visited = 0");
 
 int rowCount = 0;
 
-while (reader.Read())
+while (feed.HasMoreResults)
 {
-    int recordID = reader.GetInt32(reader.GetOrdinal("ID"));
-    string name = reader["Name"]?.ToString() ?? string.Empty;
-    string price = reader["Price"]?.ToString() ?? string.Empty;
-    string location = reader["Location"]?.ToString() ?? string.Empty;
-    string url = reader["URL"]?.ToString() ?? string.Empty;
+    FeedResponse<RealEstate> response = await feed.ReadNextAsync();
+    foreach (RealEstate item in response)
+    {
+        await botClient.SendTextMessageAsync(
+            chatId: userChatID,
+            text: $"{item.Name}: {item.Price}, {item.Location}\n{item.Url}\n");
 
-    await botClient.SendTextMessageAsync(
-        chatId: userChatID,
-        text: $"{name}, {price}, {location}\n{url}\n"
-    );
+        RealEstate visitedItem = item with { Visited = 1 };
+        await container.ReplaceItemAsync(visitedItem, visitedItem.Id);
 
-    using SqliteCommand updateCommand = new(
-        commandText: "UPDATE RealEstate SET Visited = 1 WHERE ID = @RecordId",
-        connection: connection);
-
-    updateCommand.Parameters.AddWithValue("@RecordId", recordID);
-    updateCommand.ExecuteNonQuery();
-
-    rowCount++;
+        rowCount++;
+    }
 }
 
-logger.LogInformation($"Rows processed: {rowCount}");
+logger.LogInformation("Rows processed: {rowCount}", rowCount);
