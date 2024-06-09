@@ -9,25 +9,12 @@ using Telegram.Bot;
 
 namespace RealEstateNotifier
 {
-    public record RealEstate(
-        string Id,
-        string Name,
-        string Price,
-        string Location,
-        string Url,
-        int Visited);
-
-    public class TelegramNotifier
+    public class TelegramNotifier(ILoggerFactory loggerFactory)
     {
-        private readonly ILogger _logger;
-
-        public TelegramNotifier(ILoggerFactory loggerFactory)
-        {
-            _logger = loggerFactory.CreateLogger<TelegramNotifier>();
-        }
+        private readonly ILogger _logger = loggerFactory.CreateLogger<TelegramNotifier>();
 
         [Function("TelegramNotifier")]
-        public async Task Run([TimerTrigger("* 15 * * * *")] TimerInfo myTimer)
+        public async Task Run([TimerTrigger("0 15 * * * *")] TimerInfo myTimer)
         {
             _logger.LogInformation($"C# Timer trigger function executed at: {DateTime.Now}");
 
@@ -82,7 +69,7 @@ namespace RealEstateNotifier
                 }
             }
 
-            _logger.LogInformation("Rows processed: {RowCount}", rowCount);
+            _logger.LogInformation("Rows processed: {Count}", rowCount);
         }
     }
 }
