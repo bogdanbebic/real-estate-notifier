@@ -72,7 +72,7 @@ namespace RealEstateNotifier
             };
 
         [Function("NekretnineScraper")]
-        public async Task Run([TimerTrigger("0 1-10 * * * *")] TimerInfo myTimer)
+        public async Task Run([TimerTrigger("30 1-10 * * * *")] TimerInfo myTimer)
         {
             _logger.LogInformation($"C# Timer trigger function executed at: {DateTime.Now}");
 
