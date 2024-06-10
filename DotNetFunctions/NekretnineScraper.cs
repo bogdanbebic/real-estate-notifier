@@ -1,19 +1,13 @@
-using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using AngleSharp;
 using AngleSharp.Dom;
-using AngleSharp.Html.Parser;
-using Azure;
 using Azure.Core;
 using Azure.Identity;
-using Azure.Security.KeyVault.Secrets;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
-using Telegram.Bot;
 
 namespace RealEstateNotifier
 {
@@ -151,6 +145,12 @@ namespace RealEstateNotifier
                 string locationString = location ?? string.Empty;
                 string urlString = Url + (href ?? string.Empty);
 
+                if (!StartsWithAnyPrefix(locationString, LocationPrefixesToIgnore))
+                {
+                    // Offer is in location which is to be ignored.
+                    continue;
+                }
+
                 string hash = GetPersistableHash(
                     name: nameString,
                     price: priceString,
@@ -181,6 +181,19 @@ namespace RealEstateNotifier
             string data = string.Join(',', [name, price, location, url]);
             byte[] hash = SHA256.HashData(Encoding.ASCII.GetBytes(data));
             return Encoding.ASCII.GetString(hash);
+        }
+
+        private static bool StartsWithAnyPrefix(string input, ISet<string> prefixes)
+        {
+            foreach (string prefix in prefixes)
+            {
+                if (input.StartsWith(prefix))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }
